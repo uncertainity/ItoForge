@@ -22,6 +22,14 @@ using namespace QuantLib;
 using namespace std;
 using namespace Eigen;
 
+struct calParams{
+    HestonSurfaceFit SingleSurfaceParams;
+    HestonMultiSurfaceFit MultSurfaceParams;
+    HestonPParams meanP_garch_mcmc,varP_garch_mcmc;
+    HestonPParams meanP_pmcmc,varP_pmcmc;
+};
+
+
 void writePathToCSV(const PPath& ppath,const string& filename){
     ofstream file(filename);
     if(!file.is_open()){
@@ -94,13 +102,14 @@ int main() {
     cout << P << endl;
     cout << Q << endl;
 
+
     Size steps = 252;
     Size seed  = 42;
 
     PPath ppath = logReturns(P, steps, seed);
-    // string filename = "./logReturns.csv";
-    // writePathToCSV(ppath,filename);
-    // cout<<"Path Values written in file."<<endl;
+    string filename = "./logReturns.csv";
+    writePathToCSV(ppath,filename);
+    cout<<"Path Values written in file."<<endl;
 
     cout << ppath << endl;
     int SurfaceFrequency = 10;
@@ -112,6 +121,10 @@ int main() {
     print_Surfaces(surfaces);
     cout<<"-----------------------------------------------------------"<<endl;
 
+    calParams PARAMS;
+
+
+    // Single Surface Calibration Starts
     CallGrid CalibrationSurface = surfaces[0]; // or any surfaces[i]
     cout << "The grid chosen to be calibrated is:"<<endl;
     print_Callgrid(CalibrationSurface);
@@ -152,8 +165,11 @@ int main() {
     cout<<SurfaceFitGuesses[best_idx]<<endl;
     cout << "Final Parameters" <<endl;
     cout<<SurfaceFitsParams[best_idx]<<endl;
+    PARAMS.SingleSurfaceParams = SurfaceFitsParams[best_idx];
     cout << Q << endl;
+    // Single Surface Calibration Ends
 
+    // Multi Surface Calibration Starts
     HestonMultiSurfaceFit phi_init;
     phi_init.kappaQ = dist_kappaQ(gen);
     phi_init.thetaQ = dist_thetaQ(gen);
@@ -169,6 +185,7 @@ int main() {
     cout<<best_phi_init<<endl;
     HestonMultiSurfaceFit best_phi = nedlerMeadMultiSurface(few_surfaces,dc,cal,best_phi_init);
     cout<<best_phi<<endl;
+    PARAMS.MultSurfaceParams = best_phi;
     cout<<"Ground Truth v0:"<<endl;
     for(int i = 0; i < few_surfaces.size();i++){
         cout<<few_surfaces[i].v0<<",  ";
@@ -177,8 +194,9 @@ int main() {
     cout<<"\n";
     cout << Q << endl;
     cout<<"\n";
-    // cout<<"xxxxxxxxxxxxxxxxxxxxxxxxxxx"<<endl;
-
+    // Multi Surface Calibration Ends
+    
+    //GARCH Calibration Starts
     GarchParams gParams = garchPathFit(ppath);
     cout<<gParams<<endl;
     vector<double>daily_hPath = getGarchPath(gParams,ppath);
@@ -188,11 +206,11 @@ int main() {
     }
 
     // cout<<"v path length:"<<ppath.v.size()<<endl;
-    // cout<<"h path length:"<<hPath.size()<<endl;
+    // cout<<"h path length:"<<annual_hPath.size()<<endl;
 
-    // string filename_garch = "./returns_with_garch.csv";
-    // writePathToCSV(ppath,annual_hPath,filename_garch);
-    // cout<<"GARCH Values written in file."<<endl;
+    string filename_garch = "./returns_with_garch.csv";
+    writePathToCSV(ppath,annual_hPath,filename_garch);
+    cout<<"GARCH Values written in file."<<endl;
 
     VectorXd x0(5);
     uniform_real_distribution<> dist_mu(P.mu * (1-eps), P.mu * (1+eps));
@@ -209,6 +227,7 @@ int main() {
     double dt = 1/double(steps);
     int n_iters = 5000;
     int num_particles = 1500;
+
     // mcmcOverLatent(HestonPParams& P, PPath ppath,vector<double>vProxy,VectorXd x0,double dt,HestonPParams& meanP,HestonPParams& varP)
     HestonPParams meanP,varP;
     vector<double>vProxy = annual_hPath;
@@ -216,7 +235,14 @@ int main() {
     cout<<"Mean Statistics:"<<meanP<<endl;
     cout<<"Variance Statistics:"<<varP<<endl;
 
+    PARAMS.meanP_garch_mcmc = meanP;
+    PARAMS.varP_garch_mcmc = varP;
+
+
+    //GARCH Calibration Ends
+
     //pmcmcOverLatent(HestonPParams& P, PPath& ppath,VectorXd x0,double dt,HestonPParams& meanP,HestonPParams& varP)
+    //PMCMC Calibration Starts
     HestonPParams meanP_pmcmc,varP_pmcmc;
     pmcmcOverLatent(P,ppath,x0,dt,meanP_pmcmc,varP_pmcmc,n_iters,num_particles);
     cout<<"Mean Statistics:"<<meanP_pmcmc<<endl;
@@ -236,7 +262,23 @@ int main() {
     }
     
     writeSampledPaths(sampledPaths);
-    cout<<"Sampled Paths from PMCMC Written."<<endl;    
+    cout<<"Sampled Paths from PMCMC Written."<<endl; 
+
+    PARAMS.meanP_pmcmc = meanP_pmcmc;
+    PARAMS.varP_pmcmc = varP_pmcmc;
+    //PMCMC Calibration Ends
+    cout<<"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"<<endl;
+    cout<<"Final Prints"<<endl;
+    cout<<P<<endl;
+    cout<<Q<<endl;
+    cout<<PARAMS.SingleSurfaceParams<<endl;
+    cout<<PARAMS.MultSurfaceParams<<endl;
+    cout<<PARAMS.meanP_garch_mcmc<<endl;
+    cout<<PARAMS.varP_garch_mcmc<<endl;
+    cout<<PARAMS.meanP_pmcmc<<endl;
+    cout<<PARAMS.varP_pmcmc<<endl;
+    cout<<"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"<<endl;
+
     return 0;
 }
 

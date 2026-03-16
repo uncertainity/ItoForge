@@ -281,6 +281,7 @@ namespace qe{
     }
 
     struct MultiSurfaceObjective : public QuantLib::CostFunction{
+    
     const vector<CallGrid>& surfaces;
     const DayCounter& dc;
     const Calendar& cal;
