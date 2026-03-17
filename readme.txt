@@ -5,5 +5,3 @@ export LD_LIBRARY_PATH="$HOME/local/lib:$LD_LIBRARY_PATH"
 
 This is mainly a Simulation and Calibration engine for stochastic volatility models (currently Heston) supporting bayesian calibration of model parameters.
 It can also be used for Particle Filters and PMCMC techniques.
-
-

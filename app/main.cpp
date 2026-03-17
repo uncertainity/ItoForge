@@ -125,7 +125,7 @@ int main() {
 
 
     // Single Surface Calibration Starts
-    CallGrid CalibrationSurface = surfaces[0]; // or any surfaces[i]
+    CallGrid CalibrationSurface = surfaces[10]; // or any surfaces[i]
     cout << "The grid chosen to be calibrated is:"<<endl;
     print_Callgrid(CalibrationSurface);
 

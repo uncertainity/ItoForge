@@ -114,10 +114,11 @@ namespace qe{
                 helpers.push_back(h);
             }
         }
-        LevenbergMarquardt opt(1e-8, 1e-8, 1e-8);
+        //LevenbergMarquardt opt(1e-4, 1e-4, 1e-4);
+        Simplex opt(0.05);
         EndCriteria ec(
-            2000, 500,   // max iterations, stationary iterations
-            1e-8, 1e-8, 1e-8
+            100, 20,   // max iterations, stationary iterations
+            1e-4, 1e-4, 1e-4
         );
         // model is an object (HestonModel inherits from CalibrateModel)
         model->calibrate(helpers, opt, ec);
@@ -132,11 +133,11 @@ namespace qe{
             n++;
         }
         HestonSurfaceFit out;
-        out.v0 = params[0];
+        out.thetaQ = params[0];
         out.kappaQ = params[1];
-        out.thetaQ = params[2];
-        out.xi = params[3];
-        out.rho = params[4];
+        out.xi     = params[2];
+        out.rho    = params[3];
+        out.v0     = params[4];
         out.rmseIv = sqrt(sse / max<Size>(1, n));
         out.maxAbsIvErr = maxAbs;
         return out;
